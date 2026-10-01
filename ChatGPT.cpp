@@ -1,7 +1,12 @@
- #include <iostream>
+/*  EECS 348 Assignment 2
+ *  Idk yet
+ * 
+ *  Collaborators: Luke Tidball, ChatGPT
+ */ 
+
+#include <iostream>
 #include <string>
 #include <sstream>
-#include <iomanip>
 #include <vector>
 
 using namespace std;
@@ -11,45 +16,52 @@ using namespace std;
 // ------------------------------------------------------------
 class Email {
 private:
-    string sender;
+    string senderCategory;
     string subject;
     string date;
+    int dateKey;
 
     int priority() const {
-        if (sender == "Boss")
+        if (senderCategory == "Boss")
             return 5;
-        else if (sender == "Subordinate")
+        else if (senderCategory == "Subordinate")
             return 4;
-        else if (sender == "Peer")
+        else if (senderCategory == "Peer")
             return 3;
-        else if (sender == "ImportantPerson")
+        else if (senderCategory == "ImportantPerson")
             return 2;
         else
-            return 1; // OtherPerson
+            return 1; // OtherPerson or unrecognized category
     }
 
+
     // Converts MM-DD-YYYY into a number that can be compared.
-    int dateValue() const {
+    int convertDateToKey(const string& date) const {
         int month, day, year;
         char dash1, dash2;
 
         stringstream ss(date);
-        ss >> month >> dash1 >> day >> dash2 >> year;
 
-        return year * 10000 + month * 100 + day;
+        if (ss >> month >> dash1 >> day >> dash2 >> year) {
+            return year * 10000 + month * 100 + day;
+        }
+
+        return 0;
     }
+
 
 public:
-    Email() {}
+    Email()
+        : senderCategory(""), subject(""), date(""), dateKey(0) {}
 
-    Email(string sender, string subject, string date) {
-        this->sender = sender;
-        this->subject = subject;
-        this->date = date;
-    }
+    Email(string senderCategory, string subject, string date)
+        : senderCategory(senderCategory),
+        subject(subject),
+        date(date),
+        dateKey(convertDateToKey(date)) {}
 
     string getSender() const {
-        return sender;
+        return senderCategory;
     }
 
     string getSubject() const {
@@ -67,8 +79,9 @@ public:
         }
 
         // Same sender category: newest email gets priority.
-        return dateValue() > other.dateValue();
+        return dateKey > other.dateKey;
     }
+
 };
 
 // ------------------------------------------------------------
@@ -145,8 +158,7 @@ public:
         heapifyUp(heap.size() - 1);
     }
 
-    // Return the highest-priority email without removing it.
-    Email getMax() const {
+    const Email& getMax() const {
         return heap[0];
     }
 
@@ -184,14 +196,10 @@ int main() {
 
     string line;
 
-    // Used to remember the email displayed by the most recent NEXT.
-    // This is important because two NEXT commands in a row should
-    // display the same email.
-    bool hasCurrentEmail = false;
-    Email currentEmail;
-
     while (getline(cin, line)) {
-
+        if (line.empty()) {
+            continue;
+        }
         // --------------------------------------------------------
         // EMAIL command
         // --------------------------------------------------------
@@ -202,14 +210,14 @@ int main() {
             size_t comma1 = data.find(',');
             size_t comma2 = data.find(',', comma1 + 1);
 
-            string sender = data.substr(0, comma1);
+            string senderCategory = data.substr(0, comma1);
             string subject = data.substr(
                 comma1 + 1,
                 comma2 - comma1 - 1
             );
             string date = data.substr(comma2 + 1);
 
-            Email email(sender, subject, date);
+            Email email(senderCategory, subject, date);
             emailQueue.insert(email);
         }
 
@@ -223,16 +231,13 @@ int main() {
                 continue;
             }
 
-            // Only get the highest-priority email.
-            // Do NOT remove it.
-            currentEmail = emailQueue.getMax();
-            hasCurrentEmail = true;
+            // Get the highest-priority email without removing it.
+            const Email& currentEmail = emailQueue.getMax();
 
-            cout << "Next email:" << endl;
-            cout << "Sender: " << currentEmail.getSender() << endl;
-            cout << "Subject: " << currentEmail.getSubject() << endl;
-            cout << "Date: " << currentEmail.getDate() << endl;
-            cout << endl;
+            cout << "\nNext email:\n";
+            cout << "\tSender: " << currentEmail.getSender() << "\n";
+            cout << "\tSubject: " << currentEmail.getSubject() << "\n";
+            cout << "\tDate: " << currentEmail.getDate() << "\n";
         }
 
         // --------------------------------------------------------
@@ -245,8 +250,6 @@ int main() {
                 // whether or not NEXT was called first.
                 emailQueue.removeMax();
             }
-
-            hasCurrentEmail = false;
         }
 
         // --------------------------------------------------------
@@ -254,9 +257,9 @@ int main() {
         // --------------------------------------------------------
         else if (line == "COUNT") {
             cout << "There are "
-                 << emailQueue.size()
-                 << " emails to read."
-                 << endl;
+                << emailQueue.size()
+                << " emails to read."
+                << endl;
         }
     }
 
